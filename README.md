@@ -14,11 +14,11 @@ The code is compiled on a Raspberry PI B+ v1.2. You need the following library:
 
 To show the performance I draw a random value of temperature, atmospheric pressure and humidity.
 
-####Compile
+#### Compile
 ```
 gcc -v -o orologio orologio.cpp OraBigFont.cpp JPFont.cpp LCD240x128.cpp RPI.cpp -L/usr/local/lib -lbcm2835 -lstdc++ -lrt -O `GraphicsMagick-config --cppflags --ldflags --libs`
 ```
-####Run
+#### Run
 ```
 sudo ./orologio
 ```
