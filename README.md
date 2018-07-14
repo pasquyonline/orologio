@@ -8,17 +8,17 @@ At the moment the code is an early alpha version, so, no optimization and no cle
 Anyway the core (class `LCD240x128`) are clean and optimized because I need the maximum speed possible to send 
 data to the display and only the region that I need to update are drawn.
 
-The code is compiled on a Raspberry PI B+ v1.2. You need the following library:
+The code is compiled on a **Raspberry PI B+ v1.2**. You need the following library:
  1. [ImageMagick](https://www.imagemagick.org/script/download.php) to load images used to render big character.
  2. [bcm2835](http://www.airspayce.com/mikem/bcm2835/index.html) to send data trough the GPIO.
 
 To show the performance I draw a random value of temperature, atmospheric pressure and humidity.
 
-#### Compile
+## Compile
 ```
 gcc -v -o orologio orologio.cpp OraBigFont.cpp JPFont.cpp LCD240x128.cpp RPI.cpp -L/usr/local/lib -lbcm2835 -lstdc++ -lrt -O `GraphicsMagick-config --cppflags --ldflags --libs`
 ```
-#### Run
+## Run
 ```
 sudo ./orologio
 ```

@@ -5,17 +5,17 @@
 #include "LCD240x128.h"
 
 /**
- * Indirizzo nella meoria del display di inizio area grafica
+ * Start address of graphic memory
  */
 unsigned short LCD240x128::START_GRAPHIC_ADDR = 0x0800;
 
 /**
- * Numero totale di pixel del display 240x128 = 30720
+ * Total number of pixels: 240x128 = 30720
  */
 unsigned short LCD240x128::TOTAL_PIXEL = 30720;
 
 /**
- * Costruttore
+ * Constructor
  */
 LCD240x128::LCD240x128(){
     LCDInitPinData();
@@ -23,12 +23,13 @@ LCD240x128::LCD240x128(){
 }
 
 /**
+ * Constructor. See <code>setup</code> method
  *
- * @param clearChar
- * @param clearCharByte
- * @param clearCharGen
- * @param clearGraphic
- * @param clearByte
+ * @param clearChar - if <code>true</code> clear the display with <code>clearCharByte</code> character
+ * @param clearCharByte - the character (i.e. byte) used to clear the text memory
+ * @param clearCharGen - if <code>true</code> clear the display custom character
+ * @param clearGraphic - if <code>true</code> clear the display with <code>clearByte</code> byte
+ * @param clearByte - the byte used to clear the graphic memory
  */
 LCD240x128::LCD240x128(bool clearChar, uint8_t clearCharByte, bool clearCharGen, bool clearGraphic, uint8_t clearByte) {
     LCDInitPinData();
@@ -36,10 +37,9 @@ LCD240x128::LCD240x128(bool clearChar, uint8_t clearCharByte, bool clearCharGen,
 }
 
 /**
- *
+ * Initialize the pins used to comunicate with the LCD.
  */
 void LCD240x128::LCDInitPinData() {
-    //data_pin[8] = {D0, D1, D2, D3, D4, D5, D6, D7};
     data_pin = new uint8_t[8];
     data_pin[0] = D0;
     data_pin[1] = D1;
@@ -52,8 +52,8 @@ void LCD240x128::LCDInitPinData() {
 }
 
 /**
- *
- * @param clearCharByte
+ * Clear the the text memory using <code>clearCharByte</code> character.
+ * @param clearCharByte - the character used to clean the text memory
  */
 void LCD240x128::lcdClear(uint8_t clearCharByte) {
     printf("\tLCD Clear...\n");
@@ -66,7 +66,21 @@ void LCD240x128::lcdClear(uint8_t clearCharByte) {
 }
 
 /**
+ * Clear the the text memory using <code>clearCharByte</code> character and measure the time required to complete the operation.
  *
+ * @param clearCharByte - the character used to clean the text memory
+ * @param start - pointer to <code>timespec</code> struct to store the start time
+ * @param stop - pointer to <code>timespec</code> struct to store the end time
+ */
+void LCD240x128::clearLCDCharBuffer(uint8_t clearCharByte, struct timespec *start, struct timespec *stop) {
+    clock_gettime(CLOCK_REALTIME, start);
+    lcdClear(clearCharByte);
+    clock_gettime(CLOCK_REALTIME, stop);
+    LCD240x128::printDuration(start, stop);
+}
+
+/**
+ * Clear the the custom character memory.
  */
 void LCD240x128::lcdClearCharGen() {
     printf("\tLCD Clear Char gen...\n");
@@ -79,27 +93,53 @@ void LCD240x128::lcdClearCharGen() {
 }
 
 /**
- *
- * @param c
+ * Clear the the graphic memory using <code>clearByte</code> byte.
+ * @param clearByte - the byte used to clean the graphic memory
  */
-void LCD240x128::lcdClearGraphic(uint8_t c) {
+void LCD240x128::lcdClearGraphic(uint8_t clearByte) {
     printf("\tLCD Clear Graphic...\n");
     write2DataAndCommand(0x00, 0x08, 0x24);
-    //for(unsigned int a=0x800; a<0x1BFF; a++) {
     /*
      * Ricorda che il display ha il Font-Select a livello HIGH, ovvero caratteri 6x8 (WxH),
      * 40 colonne (di 6 pixel l'una = 240pixel orizzontali) x 128 righe => 40x128=5120
      * Questo implica che gli ultimi 2 bit del byte di cancellazione sono ignorati
      * */
     for(unsigned int a=0; a<5120; a++) {
-        write1DataAndCommand(c, 0xC0);
+        write1DataAndCommand(clearByte, 0xC0);
     }
     writeCommand(0xb2);
     printf("\t...LCD Clear Graphic Fine.\n");
 }
 
 /**
+ * Clear the the graphic memory using <code>clearByte</code> character and measure the time required to complete the operation.
  *
+ * @param clearByte - the character used to clean the graphic memory
+ * @param start - pointer to <code>timespec</code> struct to store the start time
+ * @param stop - pointer to <code>timespec</code> struct to store the end time
+ */
+void LCD240x128::clearLCDGraphicBuffer(uint8_t clearByte, struct timespec *start, struct timespec *stop) {
+    clock_gettime(CLOCK_REALTIME, start);
+    lcdClearGraphic(clearByte);
+    clock_gettime(CLOCK_REALTIME, stop);
+    LCD240x128::printDuration(start, stop);
+}
+
+/**
+ * Clear the the custom character memory and measure the time required to complete the operation.
+ *
+ * @param start - pointer to <code>timespec</code> struct to store the start time
+ * @param stop - pointer to <code>timespec</code> struct to store the end time
+ */
+void LCD240x128::clearLCDCharGenBuffer(struct timespec *start, struct timespec *stop) {
+    clock_gettime(CLOCK_REALTIME, start);
+    lcdClearCharGen();
+    clock_gettime(CLOCK_REALTIME, stop);
+    LCD240x128::printDuration(start, stop);
+}
+
+/**
+ * LCD Initialization
  */
 void LCD240x128::LCDInit() {
     printf("\tStart init cmd...\n");
@@ -154,13 +194,15 @@ void LCD240x128::LCDInit() {
 }
 
 /**
+ * Initalize the LCD and clear the text memory, the graphic memory and custom character.
  *
- * @param clearChar
- * @param clearCharByte
- * @param clearCharGen
- * @param clearGraphic
- * @param clearByte
- * @return
+ * @param clearChar - if <code>true</code> clear the display with <code>clearCharByte</code> character
+ * @param clearCharByte - the character (i.e. byte) used to clear the text memory
+ * @param clearCharGen - if <code>true</code> clear the display custom character
+ * @param clearGraphic - if <code>true</code> clear the display with <code>clearByte</code> byte
+ * @param clearByte - the byte used to clear the graphic memory
+ *
+ * @return 0
  */
 int LCD240x128::setup(bool clearChar, uint8_t clearCharByte, bool clearCharGen, bool clearGraphic, uint8_t clearByte) {
     struct timespec start, stop;
@@ -186,44 +228,7 @@ int LCD240x128::setup(bool clearChar, uint8_t clearCharByte, bool clearCharGen, 
 }
 
 /**
- *
- * @param clearCharByte
- * @param start
- * @param stop
- */
-void LCD240x128::clearLCDCharBuffer(uint8_t clearCharByte, struct timespec *start, struct timespec *stop) {
-    clock_gettime(CLOCK_REALTIME, start);
-    lcdClear(clearCharByte);
-    clock_gettime(CLOCK_REALTIME, stop);
-    LCD240x128::printDuration(start, stop);
-}
-
-/**
- *
- * @param start
- * @param stop
- */
-void LCD240x128::clearLCDCharGenBuffer(struct timespec *start, struct timespec *stop) {
-    clock_gettime(CLOCK_REALTIME, start);
-    lcdClearCharGen();
-    clock_gettime(CLOCK_REALTIME, stop);
-    LCD240x128::printDuration(start, stop);
-}
-
-/**
- *
- * @param clearByte
- * @param start
- * @param stop
- */
-void LCD240x128::clearLCDGraphicBuffer(uint8_t clearByte, struct timespec *start, struct timespec *stop) {
-    clock_gettime(CLOCK_REALTIME, start);
-    lcdClearGraphic(clearByte);
-    clock_gettime(CLOCK_REALTIME, stop);
-    LCD240x128::printDuration(start, stop);
-}
-
-/**
+ * Set the pin mode: input or output.
  *
  * @param mode - PIN mode
  */
@@ -245,8 +250,9 @@ void LCD240x128::setDataPinOutputMode(uint8_t mode) {
 }
 
 /**
+ * Read the LCD status after a command was send.
  *
- * @return
+ * @return the status byte
  */
 uint8_t LCD240x128::readLCDStatus() {
     uint8_t lcdstatus[8];
@@ -275,9 +281,10 @@ uint8_t LCD240x128::readLCDStatus() {
 }
 
 /**
+ * Send a byte to the LCD. The byte may be a command or a data
  *
- * @param d
- * @param isData
+ * @param d - the data to send
+ * @param isData - if true parameter d is a data else is a command
  */
 void LCD240x128::writeByte(uint8_t d, bool isData) {
     setDataPinOutputMode(BCM2835_GPIO_FSEL_OUTP);
@@ -308,7 +315,7 @@ void LCD240x128::writeByte(uint8_t d, bool isData) {
 }
 
 /**
- *
+ * Wait the LCD for the S0-S1 status
  */
 void LCD240x128::waitLCDReadyS0S1() {
     uint8_t b;
@@ -319,7 +326,7 @@ void LCD240x128::waitLCDReadyS0S1() {
 }
 
 /**
- *
+ * Wait the LCD for the S3 status
  */
 void LCD240x128::waitLCDReadyS3() {
     uint8_t b;
@@ -330,6 +337,7 @@ void LCD240x128::waitLCDReadyS3() {
 }
 
 /**
+ * Write a data byte
  *
  * @param d
  */
@@ -338,6 +346,7 @@ void LCD240x128::writeByteData(uint8_t d) {
 }
 
 /**
+ * Write a command byte
  *
  * @param cmd
  */
@@ -346,6 +355,7 @@ void LCD240x128::writeByteCommand(uint8_t cmd) {
 }
 
 /**
+ * Wait for the S3 status and write a command byte
  *
  * @param cmd
  */
@@ -355,9 +365,10 @@ void LCD240x128::writeCommand(uint8_t cmd) {
 }
 
 /**
+ * Write a 1 byte data and a command (that require 1 data byte).
  *
- * @param d
- * @param cmd
+ * @param d - the data to write
+ * @param cmd - the command to send
  */
 void LCD240x128::write1DataAndCommand(uint8_t d, uint8_t cmd) {
     waitLCDReadyS0S1();
@@ -368,10 +379,11 @@ void LCD240x128::write1DataAndCommand(uint8_t d, uint8_t cmd) {
 }
 
 /**
+ * Write 2 byte data and a command (that require 2 data byte).
  *
- * @param d1
- * @param d2
- * @param cmd
+ * @param d1 - the low byte of data to write
+ * @param d2 - the high byte of data to write
+ * @param cmd - the command to send
  */
 void LCD240x128::write2DataAndCommand(uint8_t d1, uint8_t d2, uint8_t cmd) {
     waitLCDReadyS0S1();
@@ -405,10 +417,11 @@ void LCD240x128::locateXY(uint8_t xa, uint8_t ya, bool graphicMode) {
 }
 
 /**
+ * Display a string using the text mode.
  *
- * @param x
- * @param y
- * @param ascii
+ * @param x - X coordinate of the start position
+ * @param y - Y coordinate of the start position
+ * @param ascii - pointer to the character array containing the string to display
  */
 void LCD240x128::displayStr(uint8_t x, uint8_t y, char *ascii) {
     locateXY(x, y, false);
