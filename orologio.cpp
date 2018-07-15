@@ -26,11 +26,10 @@
 
 volatile sig_atomic_t done = 0;
 
-void getIPAddress(char *msgR1, char *msgR2, int r, int c) {
+void getIPAddress(char *msg) {
     struct ifaddrs *ifaddr, *ifa;
     int family, s;
     char host[NI_MAXHOST];
-    int ipStampato = 0;
 
     if(getifaddrs(&ifaddr) == -1) {
         perror("getifaddrs");
@@ -42,47 +41,14 @@ void getIPAddress(char *msgR1, char *msgR2, int r, int c) {
             if ((strcmp(ifa->ifa_name, "lo") != 0)/*&&(ifa->ifa_addr->sa_family==AF_INET)*/) {
                 if (s != 0) {}
                 else {
-                    //sprintf(msg, "Net: %+5s",ifa->ifa_name );
-                    //printLine(msg, 7, 0);
                     int l = strlen(host);
-                    if (l < 10) {
-                        sprintf(msgR1, "%+10s", host);
-                        //printLine(msgR1, r, c);
-                        cout << msgR1 << endl;
-                    } else {
-                        //192.168.1.26
-                        int secondoPt = 0;
-                        for (int i = 0; i < l; i++)
-                            if (host[i] != '.') secondoPt++;
-                            else break;
-                        secondoPt++;
-                        for (int i = secondoPt; i < l; i++)
-                            if (host[i] != '.') secondoPt++;
-                            else break;
-                        host[secondoPt] = 0;
-                        sprintf(msgR1, "IP:%s", host);
-                        //printLine(msgR1, r, c);
-                        cout << msgR1 << endl;
-                        host[secondoPt] = '.';
-                        sprintf(msgR2, "%+10s", &host[secondoPt]);
-                        //printLine(msgR2, r + 8, c);
-                        cout << msgR2 << endl;
-                        ipStampato = 1;
-                    }
+                    strcpy(msg, host);
+                    cout << host << endl;
                 }
             }
         }
-
-        if (ipStampato == 0) {
-            sprintf(msgR1, "IP:  127.0");
-            //printLine(msgR1, r, c);
-            cout << msgR1 << endl;
-            sprintf(msgR2, "      .0.1");
-            //printLine(msgR2, r + 8, c);
-            cout << msgR2 << endl;
-        }
-        freeifaddrs(ifaddr);
     }
+    freeifaddrs(ifaddr);
 }
 
 
@@ -456,8 +422,8 @@ int main(int argc, char **argv) {
 
     setupSignalAction();
 
-    char msg1[20], msg2[20];
-    getIPAddress(msg1, msg2, 7, 0);
+    char ipAddressString[20];
+    getIPAddress(ipAddressString);
 
     setupStatusLED();
     statusLedON();
@@ -526,6 +492,7 @@ int main(int argc, char **argv) {
     /* initialize random seed: */
     srand (time(NULL));
 
+    lcd240x128->displayStr(0, 11, ipAddressString);
     while(done==0) {
         graphicAddr = startPosizioneOra + LCD240x128::START_GRAPHIC_ADDR;
         lcd240x128->write2DataAndCommand((uint8_t) (graphicAddr & 0xFF), (uint8_t) (graphicAddr >> 8), 0x24);
