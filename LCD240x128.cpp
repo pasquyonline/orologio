@@ -40,6 +40,7 @@ LCD240x128::LCD240x128(bool clearChar, uint8_t clearCharByte, bool clearCharGen,
  * Initialize the pins used to comunicate with the LCD.
  */
 void LCD240x128::LCDInitPinData() {
+    //data_pin[8] = {D0, D1, D2, D3, D4, D5, D6, D7};
     data_pin = new uint8_t[8];
     data_pin[0] = D0;
     data_pin[1] = D1;

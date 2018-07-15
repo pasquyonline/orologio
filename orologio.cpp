@@ -12,10 +12,79 @@
 #include <cstring>
 #include <math.h>
 
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <ifaddrs.h>
+
+#include <signal.h>
+
 #include <magick/api.h>
 #include "LCD240x128.h"
 #include "OraBigFont.h"
 #include "JPFont.h"
+
+volatile sig_atomic_t done = 0;
+
+void getIPAddress(char *msgR1, char *msgR2, int r, int c) {
+    struct ifaddrs *ifaddr, *ifa;
+    int family, s;
+    char host[NI_MAXHOST];
+    int ipStampato = 0;
+
+    if(getifaddrs(&ifaddr) == -1) {
+        perror("getifaddrs");
+    }
+    else {
+        for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+            if (ifa->ifa_addr == NULL) continue;
+            s = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+            if ((strcmp(ifa->ifa_name, "lo") != 0)/*&&(ifa->ifa_addr->sa_family==AF_INET)*/) {
+                if (s != 0) {}
+                else {
+                    //sprintf(msg, "Net: %+5s",ifa->ifa_name );
+                    //printLine(msg, 7, 0);
+                    int l = strlen(host);
+                    if (l < 10) {
+                        sprintf(msgR1, "%+10s", host);
+                        //printLine(msgR1, r, c);
+                        cout << msgR1 << endl;
+                    } else {
+                        //192.168.1.26
+                        int secondoPt = 0;
+                        for (int i = 0; i < l; i++)
+                            if (host[i] != '.') secondoPt++;
+                            else break;
+                        secondoPt++;
+                        for (int i = secondoPt; i < l; i++)
+                            if (host[i] != '.') secondoPt++;
+                            else break;
+                        host[secondoPt] = 0;
+                        sprintf(msgR1, "IP:%s", host);
+                        //printLine(msgR1, r, c);
+                        cout << msgR1 << endl;
+                        host[secondoPt] = '.';
+                        sprintf(msgR2, "%+10s", &host[secondoPt]);
+                        //printLine(msgR2, r + 8, c);
+                        cout << msgR2 << endl;
+                        ipStampato = 1;
+                    }
+                }
+            }
+        }
+
+        if (ipStampato == 0) {
+            sprintf(msgR1, "IP:  127.0");
+            //printLine(msgR1, r, c);
+            cout << msgR1 << endl;
+            sprintf(msgR2, "      .0.1");
+            //printLine(msgR2, r + 8, c);
+            cout << msgR2 << endl;
+        }
+        freeifaddrs(ifaddr);
+    }
+}
+
 
 inline void setupStatusLED() {
     //bcm2835_gpio_fsel(RPI_BPLUS_GPIO_J8_19, BCM2835_GPIO_FSEL_OUTP);
@@ -354,6 +423,18 @@ void drawString(LCD240x128* lcd240x128, JPFont *itaFont,
     (*_graphicAddr) = graphicAddr;
 }
 
+void signalterminate(int signum) {
+    done = 1;
+    printf("Orologio LCD 240x128 exit on sigterm %d.\n", signum);
+}
+
+void setupSignalAction() {
+    struct sigaction action;
+    memset(&action, 0, sizeof(struct sigaction));
+    action.sa_handler = signalterminate;
+    sigaction(SIGTERM, &action, NULL);
+}
+
 int main(int argc, char **argv) {
     Image *image = (Image *) NULL;
     ImageInfo *imageInfo;
@@ -372,6 +453,11 @@ int main(int argc, char **argv) {
         printf("Failed to map the physical GPIO registers into the virtual memory space.\n");
         return -1;
     }
+
+    setupSignalAction();
+
+    char msg1[20], msg2[20];
+    getIPAddress(msg1, msg2, 7, 0);
 
     setupStatusLED();
     statusLedON();
@@ -396,7 +482,7 @@ int main(int argc, char **argv) {
     if(argc==2) {
         strncpy(infile, argv[1], MaxTextExtent-1 );
     } else {
-        strncpy(infile, const_cast<char *>("test/kanji.png"), MaxTextExtent-1 );
+        strncpy(infile, const_cast<char *>("test/2030-1.bmp"), MaxTextExtent-1 );
     }
 
     printf("End setup.\n");
@@ -411,8 +497,6 @@ int main(int argc, char **argv) {
     struct timeval tv;
     struct timezone tz;
     struct tm *tm;
-
-    char exit=0;
 
     char secondString[4];
     char dateString[13];
@@ -442,7 +526,7 @@ int main(int argc, char **argv) {
     /* initialize random seed: */
     srand (time(NULL));
 
-    while(exit!='*') {
+    while(done==0) {
         graphicAddr = startPosizioneOra + LCD240x128::START_GRAPHIC_ADDR;
         lcd240x128->write2DataAndCommand((uint8_t) (graphicAddr & 0xFF), (uint8_t) (graphicAddr >> 8), 0x24);
 
@@ -521,11 +605,14 @@ int main(int argc, char **argv) {
     }
 
     delete oraBigFont;
+    delete jpFont;
+    delete itaFont;
 
     DestroyMagick();
 
     statusLedOFF();
 
     bcm2835_close();
+
     return 0;
 }
